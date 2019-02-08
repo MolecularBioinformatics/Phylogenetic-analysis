@@ -1,0 +1,17 @@
+# This file defines limits for proteins. The columns should be whitespace-separated.
+# Empty lines and everything behind hashes is ignored.
+# The first column contains the protein name.
+# The second column contains the highest evalue that should be allowed.
+# The third column contains the lowest length that should be allowed.
+
+# The `default` values are used when there are no values for a given protein.
+# Unspecified values must be marked with some letter or string (e.g. `x`).
+# Default values will be taken for unspecified values.
+
+# The file has effect in step 2 (combine parsed results) of the workflow.
+
+default	1e-30	50
+
+prot1		x	50
+protB		1e-50	x
+asdf		x	x

@@ -1,0 +1,7 @@
+# This file contains all proteins.
+# The first column gives the general protein name, the second column the fasta
+# file of the seed protein. Columns must be separated by whitespace.
+
+prot1	human_prot1.fasta
+prot1	yeast_prot1.fasta
+protB	elephant_ugyht.fasta

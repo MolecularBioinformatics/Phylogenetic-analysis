@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Heatmap</title>
+<style type="text/css">
+fieldset div {{
+	float: left;
+	width: 50%;
+}}
+
+legend {{
+	font-family: sans-serif;
+	font-variant: small-caps;
+}}
+
+span.left {{
+	float: left;
+	color: black;
+}}
+
+span.right {{
+	float: right;
+	color: white;
+}}
+
+#evalueNumber {{
+	border: solid 0px black;
+	border-bottom: solid 1px black;
+	width: 3em;
+	font-size: 12pt;
+}}
+
+#indicatordiv {{
+	border: 1px solid red;
+	background-color: white;
+	padding: 3px;
+	position: absolute;
+	left: -1000px;
+	top: 0px;
+}}
+
+#scalebar {{
+	display: inline-block;
+	float: none;
+	width: 150px;
+	background-image: linear-gradient(to right, white, black);
+}}
+</style>
+</head>
+<body>
+<canvas id="c" width="{CWIDTH}" height="{CHEIGHT}"></canvas>
+
+<form>
+<div id="indicatordiv"><output id="indicator" size="30"></output></div>
+
+<fieldset><legend>Absolute Values</legend>
+<div>
+Show only combinations with evalues better than:<br>
+<input type="range" id="evalueSlider" value="30" min="0" max="150" step="1" oninput="updateCanvas(this)">
+1e- <input type="number" value="30" min="0" max="150" id="evalueNumber" oninput="updateCanvas(this)">
+</div>
+
+<div>
+In every enzyme/species combination that has a black dot, the particular enzyme was found in that species in Blast with an e-value better than the e-value chosen with the slider (or entered into the field).
+</div>
+</fieldset>
+
+<p><button type="button" onclick="toggleAbsRel()">Toggle absolute/relative</button> <button type="button" onclick="toggleAlphClus()">Toggle alphabetical/clustered order</button></p>
+
+<fieldset><legend>Relative Values</legend>
+<div>
+Color for relative values:
+<select size="1" id="color" onchange="makeCanvasRelative()">
+<option value="grey">greyscale</option>
+<option value="greenred">green → red</option>
+<option value="redscale">redscale</option>
+</select><br>
+<div id="scalebar"><span class="left">1</span><span class="right">1e-150</span></div>
+</div>
+
+<div>
+The color of every enzyme/species combination indicates the best e-value of the enzyme found in the species by Blast.
+</div>
+</fieldset>
+
+</form>
+
+<output id="debug"></output>
+
+<script type="text/javascript">
+var taxa = {TAXA};
+
+// alphabetically
+var adata = {ADATA};
+var aproteins = {APROTEINS};
+var acluster = [];
+
+// clustered
+var cdata = {CDATA};
+var cproteins = {CPROTEINS};
+var ccluster = {CLUSTER};
+
+var data = cdata;
+var proteins = cproteins;
+var cluster = ccluster;
+
+var rows = data.length;
+var cols = data[0].length;
+
+var isAbsolute = false;
+var isClustered = true;
+
+var oldPosX = -1000;
+var oldPosY = -1000;
+
+var c = document.getElementById("c");
+var ctx = c.getContext("2d");
+ctx.font = "11px sans-serif";
+
+var dendrogramoffset = 75;
+var width = 12;
+var height = 12;
+var blockwidth = width - 1;
+var blockheight = height - 1;
+var halfwidth = width / 2;
+
+var proteinBoxTop = height * rows + 10 + dendrogramoffset;
+var taxaBoxLeft = width * cols + 10;
+
+function drawProteins()
+{{
+	ctx.fillStyle = "#ffffff";
+	ctx.fillRect(0, proteinBoxTop, taxaBoxLeft, c.height);
+	ctx.fillStyle = "#000000";
+	ctx.save();
+	ctx.translate(0, 0);
+	ctx.rotate(1.5 * Math.PI);
+	ctx.textAlign = "right";
+	for(var i = 0; i < proteins.length; i++)
+	{{
+		ctx.fillText(proteins[i], -1 * proteinBoxTop, (i + 1) * width + 2);
+	}}
+	ctx.textAlign = "left";
+	ctx.restore();
+}}
+
+function drawSpecies()
+{{
+	ctx.fillStyle = "#ffffff";
+	ctx.fillRect(taxaBoxLeft, dendrogramoffset, c.width, c.height);
+	ctx.fillStyle = "#000000";
+	for(var i = 0; i < taxa.length; i++)
+	{{
+		ctx.fillText(taxa[i], taxaBoxLeft, (i + 1) * height + 2 + dendrogramoffset);
+	}}
+}}
+
+function drawDendrogram()
+{{
+	ctx.fillStyle = "#ffffff";
+	ctx.fillRect(0, 0, c.width, dendrogramoffset + 1);
+	if(cluster.length > 0)
+	{{
+		for(var i = 0; i < cluster.length; i++)
+		{{
+			ctx.strokeStyle = cluster[i][0];
+			ctx.beginPath();
+			ctx.moveTo(cluster[i][1][0] * (taxaBoxLeft - blockwidth - 5) + halfwidth, dendrogramoffset - cluster[i][1][1] * dendrogramoffset);
+			for(var j = 2; j < cluster[i].length; j++)
+			{{
+				ctx.lineTo(cluster[i][j][0] * (taxaBoxLeft - blockwidth - 5) + halfwidth, dendrogramoffset - cluster[i][j][1] * dendrogramoffset);
+			}}
+			ctx.stroke();
+		}}
+		ctx.strokeStyle = "#000000";
+	}}
+	ctx.fillStyle = "#000000";
+}}
+
+
+var evalueSlider = document.getElementById("evalueSlider");
+var evalueNumber = document.getElementById("evalueNumber");
+var indicator = document.getElementById("indicator");
+var indicatordiv = document.getElementById("indicatordiv");
+var colorSelect = document.getElementById("color");
+var debug = document.getElementById("debug");
+
+var scalebar = document.getElementById("scalebar");
+
+function getMousePos(c, evt)
+{{
+	var rect = c.getBoundingClientRect();
+	x = evt.clientX - rect.left;
+	y = evt.clientY - rect.top;
+
+	return [x, y];
+}}
+
+function highlightPos(x, y)
+{{
+	ctx.fillStyle = "#ffffff";
+	ctx.fillRect(0, proteinBoxTop - 5, taxaBoxLeft, 5);					// lower
+	ctx.fillRect(taxaBoxLeft - 5, dendrogramoffset, 5, proteinBoxTop);	// right
+	ctx.fillRect(0, dendrogramoffset, taxaBoxLeft, 5);					// upper
+	ctx.fillRect(0, dendrogramoffset, 5, proteinBoxTop);				// left
+	ctx.fillStyle = "#00aa00";
+
+	ctx.strokeStyle = "#ffffff";
+	ctx.beginPath();
+	ctx.rect(oldPosX + 0.5, dendrogramoffset + 4.5, width, height*rows);
+	ctx.rect(4.5, oldPosY + 0.5, width * cols, height);
+	ctx.stroke();
+
+	var row = -1;
+	var col = -1;
+	ctx.strokeStyle = "#00aa00";
+	if(x > 5 && x < width * cols + 5)
+	{{
+		var posX = Math.floor((x - 5) / width) * width + 4;
+		oldPosX = posX;
+		ctx.beginPath();
+		ctx.rect(posX + 0.5, dendrogramoffset + 4.5, width, height*rows);
+		ctx.stroke();
+		ctx.fillRect(posX, proteinBoxTop - 5, blockwidth + 2, 5);
+		ctx.fillRect(posX, dendrogramoffset, blockwidth + 2, 5);
+		col = Math.floor((x - 5) / width);
+	}}
+	if(y > 5 + dendrogramoffset && y < height * rows + 5 + dendrogramoffset)
+	{{
+		var posY = Math.floor((y - 5 - dendrogramoffset) / height) * height + 4 + dendrogramoffset;
+		oldPosY = posY;
+		ctx.beginPath();
+		ctx.rect(4.5, posY + 0.5, width * cols, height);
+		ctx.stroke();
+		ctx.fillRect(taxaBoxLeft - 5, posY, 5, blockheight + 2);
+		ctx.fillRect(0, posY, 5, blockheight + 2);
+		row = Math.floor((y - 5 - dendrogramoffset) / height);
+	}}
+	ctx.strokeStyle = "#000000";
+
+	if(row >= 0 && col >= 0)
+	{{
+		v = data[row][col];
+		if(v === -100)
+		{{
+			v = '> 0';
+		}}
+		else if(v === 200)
+		{{
+			v = '< -150';
+		}}
+		else
+		{{
+			v = '-' + v;
+		}}
+		indicator.value = v;
+		indicatordiv.style.left = (x + 20) + "px";
+		indicatordiv.style.top = (y + 30) + "px";
+	}}
+	else
+	{{
+		indicator.value = '';
+		indicatordiv.style.left = "-1000px";
+		indicatordiv.style.top = "0px";
+	}}
+}}
+
+c.addEventListener("mousemove", function(evt)
+{{
+	var mousePos = getMousePos(c, evt);
+	highlightPos(mousePos[0], mousePos[1]);
+}}, false);
+
+c.addEventListener("mouseout", function(evt)
+{{
+	highlightPos(width * cols * 2, height * rows * 2);
+}}, false);
+
+var mwevt = (/Firefox/i.test(navigator.userAgent)) ? "DOMMouseScroll" : "mousewheel";
+
+c.addEventListener(mwevt, function(evt)
+{{
+	var direction = evt.detail ? -1 * evt.detail : evt.wheelDelta;
+	if(direction > 0)
+	{{
+		evalueSlider.value++;
+	}}
+	else
+	{{
+		evalueSlider.value--;
+	}}
+	updateCanvas(evalueSlider);
+	return false;
+}}, false);
+
+function drawRectAbs(ctx, x, y, fill)
+{{
+	if(fill)
+	{{
+		fill = "#000000";
+	}}
+	else
+	{{
+		fill = "#ffffff";
+	}}
+	drawRect(ctx, x, y, fill);
+}}
+
+function drawRect(ctx, x, y, fill)
+{{
+	ctx.fillStyle = fill;
+	ctx.fillRect(x * width + 5, y * height + 5 + dendrogramoffset, blockwidth, blockheight);
+}}
+
+function updateCanvas(source)
+{{
+	evalue = parseInt(source.value);
+	evalueNumber.value = evalue;
+	evalueSlider.value = evalue;
+	if(isAbsolute)
+	{{
+		makeCanvasAbsolute(source);
+	}}
+	else
+	{{
+		makeCanvasRelative();
+	}}
+}}
+
+function makeCanvasAbsolute(source)
+{{
+	isAbsolute = true;
+	for(var row = 0; row < data.length; row++)
+	{{
+		for(var col = 0; col < data[0].length; col++)
+		{{
+			drawRectAbs(ctx, col, row, data[row][col] >= evalue);
+		}}
+	}}
+}}
+
+var colors = {{
+	"greyscale": {{"min": "hsl(0, 0%, 100%)", "max": "hsl(0, 0%, 0%)"}},
+	"redscale": {{"min": "hsl(0, 100%, 100%)", "max": "hsl(0, 100%, 50%)"}},
+	"greenred": {{"min": "hsl(0, 100%, 50%)", "max": "hsl(120, 100%, 50%)"}},
+}};
+
+function makeCanvasRelative()
+{{
+	isAbsolute = false;
+	emax = 150;
+	emin = 0;
+
+	key = colorSelect.value;
+	if(!(key in colors))
+	{{
+		key = "greyscale";
+	}}
+
+	scalebar.style.backgroundImage = "linear-gradient(to right, " + colors[key]["min"] + ", " + colors[key]["max"] + ")";
+
+	for(var row = 0; row < data.length; row++)
+	{{
+		for(var col = 0; col < data[0].length; col++)
+		{{
+			if(data[row][col] > emax)
+			{{
+				fill = colors[key]["max"];
+			}}
+			else if(data[row][col] < emin)
+			{{
+				fill = colors[key]["min"];
+			}}
+			else
+			{{
+				if(key == "greenred")
+				{{
+					clr = Math.round(((data[row][col] - emin)/emax) * 120);
+					fill = "hsl(" + clr + ", 100%, 50%)";
+				}}
+				else if(key == "redscale")
+				{{
+					clr = 100 - Math.round(((data[row][col] - emin)/emax/2) * 100);
+					fill = "hsl(0, 100%, " + clr + "%)";
+				}}
+				else
+				{{
+					clr = 100 - Math.round(((data[row][col] - emin)/emax) * 100);
+					fill = "hsl(0, 0%, " + clr + "%)";
+				}}
+			}}
+			drawRect(ctx, col, row, fill);
+		}}
+	}}
+}}
+
+function toggleAbsRel()
+{{
+	if(isAbsolute)
+	{{
+		makeCanvasRelative();
+	}}
+	else
+	{{
+		makeCanvasAbsolute(evalueSlider);
+	}}
+}}
+
+function toggleAlphClus()
+{{
+	if(isClustered)
+	{{
+		isClustered = false;
+		data = adata;
+		proteins = aproteins;
+		cluster = acluster;
+	}}
+	else
+	{{
+		isClustered = true;
+		data = cdata;
+		proteins = cproteins;
+		cluster = ccluster;
+	}}
+	drawAll();
+}}
+
+function drawAll()
+{{
+	drawDendrogram();
+	drawProteins();
+	drawSpecies();
+	updateCanvas(evalueSlider);
+}}
+
+drawAll();
+</script>
+</body>
+</html>

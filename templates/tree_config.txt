@@ -1,0 +1,25 @@
+# This file contains information about which features should be shown in the
+# tree. Every line starting with a hash (#) and empty lines are ignored.
+
+# # # # # Features # # # # #
+#
+# Three features are possible. They are written as followes (without hash):
+# two_letter_code:name of the feature
+# The first feature written ist feature A, the second one feature B and the
+# third one feature C
+# The letter code is given when running `treeAttributes.py`
+# The third feature may be omited
+
+aG:protein 1		# feature A
+aA:second protein	# feature B
+bC:protein three	# feature C
+
+>bBbAaFaH			# proteins to count (may be omited; must start with >)
+
+# # # # # Colors for the features # # # # #
+#
+# The actual line with colors must start with a ! and contain eight colors in
+# hex mode separated by whitespace and/or comma.
+#   0        1        2        3        4        5        6        7
+#   A        B        C       A+B      A+C      B+C      all      none
+!#AA0000, #00AA00, #55AAFF, #DDDD00, #AA00AA, #3333FF, #000000, #c8c8c8

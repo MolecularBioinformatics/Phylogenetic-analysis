@@ -1,0 +1,70 @@
+# This file contains information about the interactive heatmap.
+# Lines starting with a hash (#) and empty lines are ignored.
+#
+# After the keyword TAXA_TO_SHOW, you may give taxa that shall be included in
+# the heatmap. One taxon per line. The format is:
+#    Name_as_shown_in_the_heatmap^TAXID
+# Where TAXID is the NCBI taxonomy id of the taxon.
+#
+# After the keyword COLORS, you may define colors. The scipy clustering
+# algorithms return colors for the tree lines depending on how closely related
+# the clusters are. Scipy returns the colors encoded in the letters g, r, c, b,
+# m for green, red, cyan, blue, magenta, respectively. You must define an actual
+# color for each letter in the format:
+#    x [TAB] #rrggbb
+# Where x is the letter and #rrggbb is the "html" color value.
+#
+# After the keyword ALGO, you may define the clustering algorithm to use.
+# Possible values are:
+#    single, complete, average, weighted, centroid, median, ward
+# See https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
+# for more details on the methods.
+
+
+TAXA_TO_SHOW
+Homo_sapiens_(Mammal)^9606
+Rattus_norvegicus_(Mammal)^10116
+Bos_taurus_(Mammal)^9913
+Gallus_gallus_(Bird)^9031
+Chelonia_mydas_(Turtle)^8469
+Python_bivittatus_(Snake)^176946
+Xenopus_laevis_(Frog)^8355
+Notothenia_coriiceps_(Fish)^8208
+Salmo_salar_(Fish)^8030
+Danio_rerio_(Fish)^7955
+Branchiostoma_floridae_(Lancelet)^7739
+Oikopleura_dioica_(Tunicate)^34765
+Strongylocentrotus_purpuratus_(Sea_urchin)^7668
+Limulus_polyphemus_(Horseshoe_crab)^6850
+Drosophila_melanogaster_(Fly)^7227
+Caenorhabditis_elegans_(Nematode)^6239
+Wuchereria_bancrofti_(Nematode)^6293
+Trichinella_spiralis_(Nematode)^6334
+Helobdella_robusta_(Annelid)^6412
+Saccoglossus_kowalevskii_(Mollusc)^10224
+Aplysia_californica_(Mollusc)^6500
+Crassostrea_gigas_(Mollusc)^29159
+Lingula_anatina_(Brachiopod)^7574
+Schistosoma_haematobium_(Platyhelminthes)^6185
+Echinococcus_granulosus_(Platyhelminthes)^6210
+Nematostella_vectensis_(Cnidaria)^45351
+Suberites_domuncula_(Sponge)^55567
+Amphimedon_queenslandica_(Sponge)^400682
+Allomyces_macrogynus_(Fungi)^28583
+Capronia_epimyces_(Fungi)^43228
+Mortierella_verticillata_(Fungi)^78898
+Saccharomyces_cerevisiae_(Fungi)^4932
+Arabidopsis_thaliana_(Plant)^3702
+Volvox_carteri_(Plant)^3067
+Chlorella_variabilis_(Plant)^554065
+Acanthamoeba_castellanii_(Amoeba)^5755
+
+COLORS
+g	#00cc00
+r	#cc0000
+c	#00cccc
+b	#0000cc
+m	#cc00cc
+
+ALGO
+centroid

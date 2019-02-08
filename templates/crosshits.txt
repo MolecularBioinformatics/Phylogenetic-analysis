@@ -1,0 +1,6 @@
+# List of proteinnames to use for crosshit calculation
+# 1 protein per line, empty lines and everything commented with a hash is ignored
+# Additional options (add each somewhere in a single line):
+#   !cross-crosshits - export an additional list with numbers of crosshits / species for each pair
+#   !groups N N N - specifies the (highest) numbers (int) of crosshits/species that are saved as individual cluster groups
+#                   Example / Standard: !groups 1 2 3 4 5 6 7 8 9 10 20 50 - all species with 1,2,3 ... cchits will be clustered and all with 11-20, 21-50 & >50 will be clustered.
